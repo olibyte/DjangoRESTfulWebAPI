@@ -45,7 +45,7 @@ class ProductCreate(CreateAPIView):
             raise ValidationError({ 'price' : 'A valid number is required'})
         return super().create(request, *args, **kwargs)
 
-class ProductDestory(DestroyAPIView):
+class ProductDestroy(DestroyAPIView):
     queryset = Product.objects.all()
     lookup_field = 'id'
 
