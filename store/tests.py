@@ -1,3 +1,6 @@
+import os.path
+from django.conf import settings
+
 from rest_framework.test import APITestCase
 
 from store.models import Product
@@ -38,15 +41,16 @@ class ProductDestroyTestCase(APITestCase):
             Product.DoesNotExist,
             Product.objects.get, id=product_id,
         )
+
 class ProductListTestCase(APITestCase):
-    def test_list_product(self):
+    def test_list_products(self):
         products_count = Product.objects.count()
         response = self.client.get('/api/v1/products/')
         self.assertIsNone(response.data['next'])
         self.assertIsNone(response.data['previous'])
         self.assertEqual(response.data['count'], products_count)
         self.assertEqual(len(response.data['results']), products_count)
-    
+
 class ProductUpdateTestCase(APITestCase):
     def test_update_product(self):
         product = Product.objects.first()
@@ -61,3 +65,20 @@ class ProductUpdateTestCase(APITestCase):
         )
         updated = Product.objects.get(id=product.id)
         self.assertEqual(updated.name, 'New Product')
+
+    def test_upload_product_photo(self):
+        product = Product.objects.first()
+        original_photo = product.photo
+        photo_path = os.path.join(settings.MEDIA_ROOT, 'products', 'vitamin-iron.jpg')
+        with open(photo_path, 'rb') as photo_data:
+            response = self.client.patch('/api/v1/products/{}/'.format(product.id), {
+                'photo': photo_data,
+            }, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.assertNotEqual(response.data['photo'], original_photo)
+        try:
+            updated = Product.objects.get(id=product.id)
+            expected_photo = os.path.join(settings.MEDIA_ROOT, 'products', 'vitamin-iron')
+            self.assertTrue(updated.photo.path.startswith(expected_photo))
+        finally:
+            os.remove(updated.photo.path)
